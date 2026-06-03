@@ -51,24 +51,40 @@
             }
         });
 
-        // Updated button action to send the data
+        // Updated button action to handle and draw the trail lines
         document.getElementById('sendBtn').addEventListener('click', async () => {
             if (!selectedCoords) return;
             
             const responseStatus = document.getElementById('backendResponse');
-            responseStatus.innerText = "Sending to Python backend...";
+            responseStatus.innerText = "Calculating trail...";
             
             try {
                 const response = await fetch('/api/generate-trail', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(selectedCoords)
                 });
                 
                 const data = await response.json();
                 responseStatus.innerText = data.message;
+                
+                // NEW: Clear any old lines if they exist before drawing a new one
+                if (window.currentTrailLine) {
+                    map.removeLayer(window.currentTrailLine);
+                }
+                
+                // NEW: Take the trail coordinates array from Python and draw it as a blue line
+                if (data.trail) {
+                    window.currentTrailLine = L.polyline(data.trail, {
+                        color: 'blue',
+                        weight: 4,
+                        opacity: 0.7
+                    }).addTo(map);
+                    
+                    // Zoom the map out slightly if needed to fit the whole shape
+                    map.fitBounds(window.currentTrailLine.getBounds());
+                }
+                
             } catch (err) {
                 responseStatus.style.color = 'red';
                 responseStatus.innerText = "Failed to communicate with backend.";
