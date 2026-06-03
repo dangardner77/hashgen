@@ -6,7 +6,6 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-# Define what data we expect from the frontend map
 class Coordinates(BaseModel):
     lat: float
     lng: float
@@ -15,19 +14,24 @@ class Coordinates(BaseModel):
 async def read_index():
     return FileResponse(os.path.join("static", "index.html"))
 
-@app.get("/api/hello")
-async def hello_backend():
-    return {"message": "On-Inn! Hello from the Python backend running on Render!"}
-
-# The new endpoint to receive map clicks
 @app.post("/api/generate-trail")
 async def generate_trail(coords: Coordinates):
-    # For now, we will just log it and echo it back to the map
-    print(f"Received On-Inn coordinates: Lat {coords.lat}, Lng {coords.lng}")
+    # A tiny shift value (roughly 800 meters to 1km out)
+    offset = 0.008 
+    
+    # Generate 3 waypoints forming a rough triangle circuit starting and ending at the pub
+    waypoint_1 = [coords.lat, coords.lng]                      # The Pub (Start)
+    waypoint_2 = [coords.lat + offset, coords.lng + offset]    # North-East
+    waypoint_3 = [coords.lat - offset, coords.lng + offset]    # South-East
+    waypoint_4 = [coords.lat, coords.lng]                      # Back to the Pub (End)
+    
+    # Put them in a list (an array of coordinates)
+    trail_line = [waypoint_1, waypoint_2, waypoint_3, waypoint_4]
     
     return {
         "status": "success",
-        "message": f"Backend received coordinates ({coords.lat}, {coords.lng}). Next step: plotting the loop!"
+        "message": "Rough circuit calculated by Python!",
+        "trail": trail_line
     }
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
