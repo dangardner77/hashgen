@@ -4,15 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hash Trail Tracker</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <style>
-        body { font-family: sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
-        #map { flex-grow: 1; width: 100%; }
-        #controls { position: absolute; bottom: 20px; left: 20px; z-index: 1000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        button { padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
-        button:disabled { background: #ccc; cursor: not-allowed; }
-    </style>
+
+    <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
 
@@ -25,72 +21,6 @@
 
     <div id="map"></div>
 
-    <script>
-        const map = L.map('map').setView([50.8473, -0.9824], 13);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-            attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
-
-        let startMarker = null;
-        let selectedCoords = null;
-
-        map.on('click', function(e) {
-            const lat = parseFloat(e.latlng.lat.toFixed(6));
-            const lng = parseFloat(e.latlng.lng.toFixed(6));
-            selectedCoords = { lat: lat, lng: lng };
-
-            document.getElementById('coords').innerText = `Lat: ${lat}, Lng: ${lng}`;
-            document.getElementById('sendBtn').disabled = false;
-
-            if (startMarker) {
-                startMarker.setLatLng(e.latlng);
-            } else {
-                startMarker = L.marker(e.latlng).addTo(map).bindPopup("<b>On-Inn!</b>").openPopup();
-            }
-        });
-
-        // Updated button action to handle and draw the trail lines
-        document.getElementById('sendBtn').addEventListener('click', async () => {
-            if (!selectedCoords) return;
-            
-            const responseStatus = document.getElementById('backendResponse');
-            responseStatus.innerText = "Calculating trail...";
-            
-            try {
-                const response = await fetch('/api/generate-trail', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(selectedCoords)
-                });
-                
-                const data = await response.json();
-                responseStatus.innerText = data.message;
-                
-                // NEW: Clear any old lines if they exist before drawing a new one
-                if (window.currentTrailLine) {
-                    map.removeLayer(window.currentTrailLine);
-                }
-                
-                // NEW: Take the trail coordinates array from Python and draw it as a blue line
-                if (data.trail) {
-                    window.currentTrailLine = L.polyline(data.trail, {
-                        color: 'blue',
-                        weight: 4,
-                        opacity: 0.7
-                    }).addTo(map);
-                    
-                    // Zoom the map out slightly if needed to fit the whole shape
-                    map.fitBounds(window.currentTrailLine.getBounds());
-                }
-                
-            } catch (err) {
-                responseStatus.style.color = 'red';
-                responseStatus.innerText = "Failed to communicate with backend.";
-                console.error(err);
-            }
-        });
-    </script>
+    <script src="/static/app.js"></script>
 </body>
 </html>
