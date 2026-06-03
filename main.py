@@ -29,7 +29,7 @@ async def generate_trail(coords: Coordinates):
     end_lng = coords.lng
     
     # OpenRouteService expects coordinates in [Longitude, Latitude] order
-    url = "https://api.openrouteservice.org/v2/directions/foot-walking/geojson"
+    url = "https://api.openrouteservice.org/v2/directions/foot-hiking/geojson"
     
     headers = {
         "Authorization": ORS_API_KEY,
@@ -41,7 +41,10 @@ async def generate_trail(coords: Coordinates):
         "coordinates": [
             [start_lng, start_lat], 
             [end_lng, end_lat]
-        ]
+        ],
+        "options": {
+            "avoid_features": ["highways"]
+        }
     }
     
     try:
@@ -59,7 +62,7 @@ async def generate_trail(coords: Coordinates):
         
         return {
             "status": "success",
-            "message": "Real footpath route fetched successfully!",
+            "message": "Hiking route fetched successfully!",
             "trail": trail_line
         }
         
