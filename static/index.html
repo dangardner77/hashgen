@@ -3,14 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hash Trail Generator</title>
-    
+    <title>Hash Trail Tracker</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <style>
         body { font-family: sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
-        #header { padding: 10px; background: #333; color: white; text-align: center; }
         #map { flex-grow: 1; width: 100%; }
         #controls { position: absolute; bottom: 20px; left: 20px; z-index: 1000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
         button { padding: 10px 15px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; }
@@ -23,15 +20,14 @@
         <h3>Select Your Pub</h3>
         <p id="coords">Click on the map to set the start point.</p>
         <button id="sendBtn" disabled>Generate 7km Trail</button>
+        <p id="backendResponse" style="margin-top: 10px; color: green; font-size: 12px;"></p>
     </div>
 
     <div id="map"></div>
 
     <script>
-        // Initialize the map centered near Hayling Island / Emsworth (Lat: 50.8473, Lng: -0.9824)
         const map = L.map('map').setView([50.8473, -0.9824], 13);
 
-        // Load standard OpenStreetMap map tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap contributors'
@@ -40,17 +36,14 @@
         let startMarker = null;
         let selectedCoords = null;
 
-        // Listen for user clicks on the map
         map.on('click', function(e) {
-            const lat = e.latlng.lat.toFixed(6);
-            const lng = e.latlng.lng.toFixed(6);
+            const lat = parseFloat(e.latlng.lat.toFixed(6));
+            const lng = parseFloat(e.latlng.lng.toFixed(6));
             selectedCoords = { lat: lat, lng: lng };
 
-            // Update UI text and activate button
             document.getElementById('coords').innerText = `Lat: ${lat}, Lng: ${lng}`;
             document.getElementById('sendBtn').disabled = false;
 
-            // Move or create the marker pin
             if (startMarker) {
                 startMarker.setLatLng(e.latlng);
             } else {
@@ -58,12 +51,29 @@
             }
         });
 
-        // Button action to send data to our Python backend
+        // Updated button action to send the data
         document.getElementById('sendBtn').addEventListener('click', async () => {
             if (!selectedCoords) return;
             
-            // Temporary alert to prove the frontend is capturing the coordinates correctly
-            alert(`Captured Coordinates!\nLat: ${selectedCoords.lat}\nLng: ${selectedCoords.lng}\n\nNext step: Sending these to Python!`);
+            const responseStatus = document.getElementById('backendResponse');
+            responseStatus.innerText = "Sending to Python backend...";
+            
+            try {
+                const response = await fetch('/api/generate-trail', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(selectedCoords)
+                });
+                
+                const data = await response.json();
+                responseStatus.innerText = data.message;
+            } catch (err) {
+                responseStatus.style.color = 'red';
+                responseStatus.innerText = "Failed to communicate with backend.";
+                console.error(err);
+            }
         });
     </script>
 </body>
