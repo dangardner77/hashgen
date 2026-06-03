@@ -56,7 +56,6 @@ async def generate_trail(coords: Coordinates):
             
         # ORS sends back a massive "GeoJSON" object. 
         # We dig out the exact list of coordinates that make up the path.
-        # It comes back as [Lng, Lat], so we flip them to [Lat, Lng] for Leaflet.
         geometry = result['features'][0]['geometry']['coordinates']
         trail_line = [[pt[1], pt[0]] for pt in geometry]
         
