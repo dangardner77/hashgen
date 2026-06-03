@@ -1,10 +1,15 @@
 import os
+import json
+import urllib.request
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 app = FastAPI()
+
+# Paste your OpenRouteService API key here
+ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijg3NTRiYWRiY2IzNjRlYzI5NjI1OTZjYTYzZDRmNTlhIiwiaCI6Im11cm11cjY0In0="
 
 class Coordinates(BaseModel):
     lat: float
@@ -16,23 +21,55 @@ async def read_index():
 
 @app.post("/api/generate-trail")
 async def generate_trail(coords: Coordinates):
-    # A tiny shift value (roughly 800 meters to 1km out)
-    offset = 0.008 
     
-    # Generate 3 waypoints forming a rough triangle circuit starting and ending at the pub
-    waypoint_1 = [coords.lat, coords.lng]                      # The Pub (Start)
-    waypoint_2 = [coords.lat + offset, coords.lng + offset]    # North-East
-    waypoint_3 = [coords.lat - offset, coords.lng + offset]    # South-East
-    waypoint_4 = [coords.lat, coords.lng]                      # Back to the Pub (End)
+    # Let's create a destination point roughly 1km North of the pub
+    start_lat = coords.lat
+    start_lng = coords.lng
+    end_lat = coords.lat + 0.010  
+    end_lng = coords.lng
     
-    # Put them in a list (an array of coordinates)
-    trail_line = [waypoint_1, waypoint_2, waypoint_3, waypoint_4]
+    # OpenRouteService expects coordinates in [Longitude, Latitude] order
+    url = "https://api.openrouteservice.org/v2/directions/foot-walking/geojson"
     
-    return {
-        "status": "success",
-        "message": "Rough circuit calculated by Python!",
-        "trail": trail_line
+    headers = {
+        "Authorization": ORS_API_KEY,
+        "Content-Type": "application/json"
     }
+    
+    # We send the start and end points as a pair of coordinates
+    body = {
+        "coordinates": [
+            [start_lng, start_lat], 
+            [end_lng, end_lat]
+        ]
+    }
+    
+    try:
+        # Package and send the request over the web to ORS
+        req = urllib.request.Request(url, data=json.dumps(body).encode('utf-8'), headers=headers, method='POST')
+        
+        with urllib.request.urlopen(req) as response:
+            result = json.loads(response.read().decode('utf-8'))
+            
+        # ORS sends back a massive "GeoJSON" object. 
+        # We dig out the exact list of coordinates that make up the path.
+        # It comes back as [Lng, Lat], so we flip them to [Lat, Lng] for Leaflet.
+        geometry = result['features'][0]['geometry']['coordinates']
+        trail_line = [[pt[1], pt[0]] for pt in geometry]
+        
+        return {
+            "status": "success",
+            "message": "Real footpath route fetched successfully!",
+            "trail": trail_line
+        }
+        
+    except Exception as e:
+        print(f"Routing Error: {e}")
+        return {
+            "status": "error",
+            "message": f"Failed to fetch route: {str(e)}",
+            "trail": []
+        }
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
