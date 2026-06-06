@@ -60,10 +60,7 @@ async def generate_trail(coords: Coordinates):
             [wp2_lng, wp2_lat],     # Sharp turn 2
             [wp3_lng, wp3_lat],     # Sharp turn 3
             [start_lng, start_lat]  # Back to pub
-        ],
-        "options": {
-            "avoid_features": ["highways"]
-        }
+        ]
     }
     
     try:
