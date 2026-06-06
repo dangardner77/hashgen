@@ -12,12 +12,18 @@
 </head>
 <body>
 
-    <div id="controls">
-        <h3>Select Your Pub</h3>
-        <p id="coords">Click on the map to set the start point.</p>
-        <button id="sendBtn" disabled>Generate 7km Trail</button>
-        <p id="backendResponse" style="margin-top: 10px; color: green; font-size: 12px;"></p>
+<div class="control-panel">
+    <h3>Select Your Pub</h3>
+    <p id="coords-display">Click on the map</p>
+    
+    <div style="margin: 15px 0;">
+        <label for="timeSlider">Target Walk Time: <b id="timeVal">35</b> mins</label>
+        <input type="range" id="timeSlider" min="15" max="90" value="35" step="5" style="width:100%;">
     </div>
+
+    <button id="generateBtn" onclick="requestBoundary()">Map Boundary</button>
+    <p id="status-message"></p>
+</div>
 
     <div id="map"></div>
 
