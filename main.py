@@ -25,41 +25,21 @@ async def generate_trail(coords: Coordinates):
     start_lat = coords.lat
     start_lng = coords.lng
     
-    # 1. Define rough offsets in degrees to build a ~4km-5km jagged loop
-    # In the UK, 0.010 degrees latitude is roughly 1.1km North/South
-    # 0.016 degrees longitude is roughly 1.1km East/West
-    lat_offset = 0.010
-    lng_offset = 0.016
+    # Target: A 35-minute outward walk (2100 seconds)
+    # This will form the boundary line for our network-aware loop
+    target_time_seconds = 2100 
 
-    # 2. Calculate 3 distinct waypoints around the start point (a diamond pattern)
-    # Waypoint 1: North-East
-    wp1_lat = start_lat + lat_offset
-    wp1_lng = start_lng + lng_offset
-    
-    # Waypoint 2: North-West (creates a sharp turn from WP1)
-    wp2_lat = start_lat + (lat_offset * 1.3) # Slightly pushed north to skew the loop
-    wp2_lng = start_lng - lng_offset
-    
-    # Waypoint 3: West-South-West
-    wp3_lat = start_lat - (lat_offset * 0.2)
-    wp3_lng = start_lng - (lng_offset * 0.8)
-
-    url = "https://api.openrouteservice.org/v2/directions/foot-hiking/geojson"
+    url = "https://api.openrouteservice.org/v2/isochrones/foot-hiking"
     
     headers = {
         "Authorization": ORS_API_KEY,
         "Content-Type": "application/json"
     }
     
-    # 3. Feed the sequence of coordinates to ORS to force a circular path
     body = {
-        "coordinates": [
-            [start_lng, start_lat], # Start at pub
-            [wp1_lng, wp1_lat],     # Sharp turn 1
-            [wp2_lng, wp2_lat],     # Sharp turn 2
-            [wp3_lng, wp3_lat],     # Sharp turn 3
-            [start_lng, start_lat]  # Back to pub
-        ]
+        "locations": [[start_lng, start_lat]],
+        "range": [target_time_seconds],
+        "range_type": "time"
     }
     
     try:
@@ -68,22 +48,33 @@ async def generate_trail(coords: Coordinates):
         with urllib.request.urlopen(req) as response:
             result = json.loads(response.read().decode('utf-8'))
             
-        geometry = result['features'][0]['geometry']['coordinates']
-        trail_line = [[pt[1], pt[0]] for pt in geometry]
+        # Extract the outer boundary polygon coordinates from the GeoJSON response
+        # The structure is: features -> geometry -> coordinates -> first ring
+        boundary_geometry = result['features'][0]['geometry']['coordinates'][0]
+        
+        # Convert from [lng, lat] to Leaflet-friendly [lat, lng]
+        boundary_line = [[pt[1], pt[0]] for pt in boundary_geometry]
         
         return {
             "status": "success",
-            "message": "Circular trail loop generated!",
-            "trail": trail_line
+            "message": "Isochrone network boundary discovered!",
+            "trail": boundary_line  # Sending the raw boundary polygon to the frontend map
         }
         
     except Exception as e:
-        print(f"Routing Error: {e}")
+        error_details = str(e)
+        if hasattr(e, 'read'):
+            try:
+                error_details = e.read().decode('utf-8')
+            except Exception:
+                pass
+        print(f"Isochrone Error: {error_details}")
         return {
             "status": "error",
-            "message": f"Failed to calculate loop: {str(e)}",
+            "message": f"Failed to calculate network boundary: {error_details}",
             "trail": []
         }
+
 
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
