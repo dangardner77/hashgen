@@ -70,7 +70,7 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
             window.currentBoundaryZone = L.polygon(data.trail, {
                 color: '#0055ff',      // Clean, bright boundary line
                 fillColor: '#00aaff',  // Soft translucent blue core
-                fillOpacity: 0.25,     // Kept low so maps, roads, and trails show cleanly underneath
+                fillOpacity: 0.1,     // Kept low so maps, roads, and trails show cleanly underneath
                 weight: 3
             }).addTo(map);
             
