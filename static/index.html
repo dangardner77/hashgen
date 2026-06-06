@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hash Trail Tracker</title>
+    <title>Hash Trail Plannner</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -15,7 +15,11 @@
     <div id="controls">
         <h3>Select Your Pub</h3>
         <p id="coords">Click on the map to set the start point.</p>
-        <button id="sendBtn" disabled>Generate 7km Trail</button>
+        <div style="margin: 12px 0;">
+            <label for="timeInput" style="font-size: 13px; display: block; margin-bottom: 4px;">Walk Time (mins):</label>
+            <input type="number" id="timeInput" value="35" min="5" max="180" style="width: 60px; padding: 4px; font-size: 13px;">
+        </div>
+        <button id="sendBtn" disabled>Generate Boundary</button>
         <p id="backendResponse" style="margin-top: 10px; color: green; font-size: 12px;"></p>
     </div>
 
@@ -24,3 +28,4 @@
     <script src="/static/app.js"></script>
 </body>
 </html>
+

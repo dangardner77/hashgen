@@ -1,3 +1,4 @@
+import math
 import os
 import json
 import urllib.request
@@ -11,63 +12,62 @@ app = FastAPI()
 # Paste your OpenRouteService API key here
 ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijg3NTRiYWRiY2IzNjRlYzI5NjI1OTZjYTYzZDRmNTlhIiwiaCI6Im11cm11cjY0In0="
 
-class Coordinates(BaseModel):
+# Renamed cleanly to TrailRequest to match your function argument below
+class TrailRequest(BaseModel):
     lat: float
     lng: float
+    minutes: int  # Dynamic time parameter
 
 @app.get("/")
 async def read_index():
     return FileResponse(os.path.join("static", "index.html"))
 
 @app.post("/api/generate-trail")
-async def generate_trail(coords: Coordinates):
+async def generate_trail(req_data: TrailRequest):
+    start_lat = req_data.lat
+    start_lng = req_data.lng
     
-    # Let's create a destination point roughly 1km North of the pub
-    start_lat = coords.lat
-    start_lng = coords.lng
-    end_lat = coords.lat + 0.010  
-    end_lng = coords.lng
-    
-    # OpenRouteService expects coordinates in [Longitude, Latitude] order
-    url = "https://api.openrouteservice.org/v2/directions/foot-hiking/geojson"
+    # 2. Convert incoming minutes to seconds for the API
+    target_time_seconds = req_data.minutes * 60 
+
+    url = "https://api.openrouteservice.org/v2/isochrones/foot-hiking"
     
     headers = {
         "Authorization": ORS_API_KEY,
         "Content-Type": "application/json"
     }
     
-    # We send the start and end points as a pair of coordinates
     body = {
-        "coordinates": [
-            [start_lng, start_lat], 
-            [end_lng, end_lat]
-        ]
+        "locations": [[start_lng, start_lat]],
+        "range": [target_time_seconds],
+        "range_type": "time"
     }
     
     try:
-        # Package and send the request over the web to ORS
         req = urllib.request.Request(url, data=json.dumps(body).encode('utf-8'), headers=headers, method='POST')
-        
         with urllib.request.urlopen(req) as response:
             result = json.loads(response.read().decode('utf-8'))
             
-        # ORS sends back a massive "GeoJSON" object. 
-        # We dig out the exact list of coordinates that make up the path.
-        # It comes back as [Lng, Lat], so we flip them to [Lat, Lng] for Leaflet.
-        geometry = result['features'][0]['geometry']['coordinates']
-        trail_line = [[pt[1], pt[0]] for pt in geometry]
+        boundary_geometry = result['features'][0]['geometry']['coordinates'][0]
+        boundary_line = [[pt[1], pt[0]] for pt in boundary_geometry]
         
         return {
             "status": "success",
-            "message": "Real footpath route fetched successfully!",
-            "trail": trail_line
+            "message": f"{req_data.minutes}-minute boundary mapped!",
+            "trail": boundary_line
         }
         
     except Exception as e:
-        print(f"Routing Error: {e}")
+        error_details = str(e)
+        if hasattr(e, 'read'):
+            try:
+                error_details = e.read().decode('utf-8')
+            except Exception:
+                pass
+        print(f"Isochrone Error: {error_details}")
         return {
             "status": "error",
-            "message": f"Failed to fetch route: {str(e)}",
+            "message": f"Failed to calculate network boundary: {error_details}",
             "trail": []
         }
 
