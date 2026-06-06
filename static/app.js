@@ -10,15 +10,8 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let startMarker = null;
 let selectedCoords = null;
 
-// Track slider elements to update the text display in real-time
-const timeSlider = document.getElementById('timeSlider');
-const timeValDisplay = document.getElementById('timeVal');
-
-if (timeSlider && timeValDisplay) {
-    timeSlider.addEventListener('input', function(e) {
-        timeValDisplay.innerText = e.target.value;
-    });
-}
+// Target the new number input element cleanly
+const timeInput = document.getElementById('timeInput');
 
 // Listen for user clicks on the map to set the Pub / "On-Inn" location
 map.on('click', function(e) {
@@ -49,8 +42,8 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
     responseStatus.style.color = 'inherit'; // Reset any error coloring
     responseStatus.innerText = "Mapping boundary zone...";
     
-    // Grab the live target time value from your slider input
-    const targetMinutes = parseInt(timeSlider ? timeSlider.value : 35);
+    // Grab the live target time value from your number input box safely
+    const targetMinutes = parseInt(timeInput ? timeInput.value : 35);
     
     // Package coordinates alongside the selected runtime limit
     const payload = {
