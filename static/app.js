@@ -10,9 +10,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let startMarker = null;
 let selectedCoords = null;
 
-// Target the new number input element cleanly
-const timeInput = document.getElementById('timeInput');
-
 // Listen for user clicks on the map to set the Pub / "On-Inn" location
 map.on('click', function(e) {
     const lat = parseFloat(e.latlng.lat.toFixed(6));
@@ -42,14 +39,15 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
     responseStatus.style.color = 'inherit'; // Reset any error coloring
     responseStatus.innerText = "Mapping boundary zone...";
     
-    // Grab the live target time value from your number input box safely
-    const targetMinutes = parseInt(timeInput ? timeInput.value : 35);
+    // Query the DOM explicitly right now when the click happens
+    const liveTimeInput = document.getElementById('timeInput');
+    const targetMinutes = liveTimeInput ? parseInt(liveTimeInput.value, 10) : 35;
     
     // Package coordinates alongside the selected runtime limit
     const payload = {
         lat: selectedCoords.lat,
         lng: selectedCoords.lng,
-        minutes: targetMinutes
+        minutes: isNaN(targetMinutes) ? 35 : targetMinutes
     };
     
     try {
