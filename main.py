@@ -12,7 +12,8 @@ app = FastAPI()
 # Paste your OpenRouteService API key here
 ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijg3NTRiYWRiY2IzNjRlYzI5NjI1OTZjYTYzZDRmNTlhIiwiaCI6Im11cm11cjY0In0="
 
-class Coordinates(BaseModel):
+# Renamed cleanly to TrailRequest to match your function argument below
+class TrailRequest(BaseModel):
     lat: float
     lng: float
     minutes: int  # Dynamic time parameter
@@ -69,8 +70,6 @@ async def generate_trail(req_data: TrailRequest):
             "message": f"Failed to calculate network boundary: {error_details}",
             "trail": []
         }
-
-
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
