@@ -28,9 +28,8 @@ async def generate_trail(coords: Coordinates):
     # 1. Define rough offsets in degrees to build a ~4km-5km jagged loop
     # In the UK, 0.010 degrees latitude is roughly 1.1km North/South
     # 0.016 degrees longitude is roughly 1.1km East/West
-    # 1. Define rough offsets in degrees to build a smaller ~2.5km loop
-    lat_offset = 0.005  # Was 0.010
-    lng_offset = 0.008  # Was 0.016
+    lat_offset = 0.010
+    lng_offset = 0.016
 
     # 2. Calculate 3 distinct waypoints around the start point (a diamond pattern)
     # Waypoint 1: North-East
