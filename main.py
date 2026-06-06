@@ -15,19 +15,19 @@ ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijg3NTRiYWRiY
 class Coordinates(BaseModel):
     lat: float
     lng: float
+    minutes: int  # Dynamic time parameter
 
 @app.get("/")
 async def read_index():
     return FileResponse(os.path.join("static", "index.html"))
 
 @app.post("/api/generate-trail")
-async def generate_trail(coords: Coordinates):
-    start_lat = coords.lat
-    start_lng = coords.lng
+async def generate_trail(req_data: TrailRequest):
+    start_lat = req_data.lat
+    start_lng = req_data.lng
     
-    # Target: A 35-minute outward walk (2100 seconds)
-    # This will form the boundary line for our network-aware loop
-    target_time_seconds = 2100 
+    # 2. Convert incoming minutes to seconds for the API
+    target_time_seconds = req_data.minutes * 60 
 
     url = "https://api.openrouteservice.org/v2/isochrones/foot-hiking"
     
@@ -44,21 +44,16 @@ async def generate_trail(coords: Coordinates):
     
     try:
         req = urllib.request.Request(url, data=json.dumps(body).encode('utf-8'), headers=headers, method='POST')
-        
         with urllib.request.urlopen(req) as response:
             result = json.loads(response.read().decode('utf-8'))
             
-        # Extract the outer boundary polygon coordinates from the GeoJSON response
-        # The structure is: features -> geometry -> coordinates -> first ring
         boundary_geometry = result['features'][0]['geometry']['coordinates'][0]
-        
-        # Convert from [lng, lat] to Leaflet-friendly [lat, lng]
         boundary_line = [[pt[1], pt[0]] for pt in boundary_geometry]
         
         return {
             "status": "success",
-            "message": "Isochrone network boundary discovered!",
-            "trail": boundary_line  # Sending the raw boundary polygon to the frontend map
+            "message": f"{req_data.minutes}-minute boundary mapped!",
+            "trail": boundary_line
         }
         
     except Exception as e:
