@@ -1,3 +1,4 @@
+import math
 import os
 import json
 import urllib.request
@@ -21,14 +22,28 @@ async def read_index():
 
 @app.post("/api/generate-trail")
 async def generate_trail(coords: Coordinates):
-    
-    # Let's create a destination point roughly 1km North of the pub
     start_lat = coords.lat
     start_lng = coords.lng
-    end_lat = coords.lat + 0.010  
-    end_lng = coords.lng
     
-    # OpenRouteService expects coordinates in [Longitude, Latitude] order
+    # 1. Define rough offsets in degrees to build a ~4km-5km jagged loop
+    # In the UK, 0.010 degrees latitude is roughly 1.1km North/South
+    # 0.016 degrees longitude is roughly 1.1km East/West
+    lat_offset = 0.010
+    lng_offset = 0.016
+
+    # 2. Calculate 3 distinct waypoints around the start point (a diamond pattern)
+    # Waypoint 1: North-East
+    wp1_lat = start_lat + lat_offset
+    wp1_lng = start_lng + lng_offset
+    
+    # Waypoint 2: North-West (creates a sharp turn from WP1)
+    wp2_lat = start_lat + (lat_offset * 1.3) # Slightly pushed north to skew the loop
+    wp2_lng = start_lng - lng_offset
+    
+    # Waypoint 3: West-South-West
+    wp3_lat = start_lat - (lat_offset * 0.2)
+    wp3_lng = start_lng - (lng_offset * 0.8)
+
     url = "https://api.openrouteservice.org/v2/directions/foot-hiking/geojson"
     
     headers = {
@@ -36,30 +51,32 @@ async def generate_trail(coords: Coordinates):
         "Content-Type": "application/json"
     }
     
-    # We send the start and end points as a pair of coordinates
+    # 3. Feed the sequence of coordinates to ORS to force a circular path
     body = {
         "coordinates": [
-            [start_lng, start_lat], 
-            [end_lng, end_lat]
-        ]
+            [start_lng, start_lat], # Start at pub
+            [wp1_lng, wp1_lat],     # Sharp turn 1
+            [wp2_lng, wp2_lat],     # Sharp turn 2
+            [wp3_lng, wp3_lat],     # Sharp turn 3
+            [start_lng, start_lat]  # Back to pub
+        ],
+        "options": {
+            "avoid_features": ["highways"]
+        }
     }
     
     try:
-        # Package and send the request over the web to ORS
         req = urllib.request.Request(url, data=json.dumps(body).encode('utf-8'), headers=headers, method='POST')
         
         with urllib.request.urlopen(req) as response:
             result = json.loads(response.read().decode('utf-8'))
             
-        # ORS sends back a massive "GeoJSON" object. 
-        # We dig out the exact list of coordinates that make up the path.
-        # It comes back as [Lng, Lat], so we flip them to [Lat, Lng] for Leaflet.
         geometry = result['features'][0]['geometry']['coordinates']
         trail_line = [[pt[1], pt[0]] for pt in geometry]
         
         return {
             "status": "success",
-            "message": "Real footpath route fetched successfully!",
+            "message": "Circular trail loop generated!",
             "trail": trail_line
         }
         
@@ -67,9 +84,10 @@ async def generate_trail(coords: Coordinates):
         print(f"Routing Error: {e}")
         return {
             "status": "error",
-            "message": f"Failed to fetch route: {str(e)}",
+            "message": f"Failed to calculate loop: {str(e)}",
             "trail": []
         }
+
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
