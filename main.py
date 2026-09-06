@@ -40,11 +40,6 @@ async def generate_trail(coords: Coordinates):
                     "points": 10,          # Increased to 10 for maximum wiggles
                     "seed": random_seed
                 },
-                "profile_params": {
-                    "weight_params": {
-                        "steepness_difficulty": 2 # Slight bias toward varied terrain
-                    }
-                },
                 "avoid_features": ["highways"]    # Steers away from major roads
             }
         }
