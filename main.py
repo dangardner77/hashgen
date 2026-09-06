@@ -39,8 +39,6 @@ async def generate_trail(coords: Coordinates):
                     "length": 4000,
                     "points": 10,          # Increased to 10 for maximum wiggles
                     "seed": random_seed
-                },
-                "avoid_features": ["highways"]    # Steers away from major roads
             }
         }
     
