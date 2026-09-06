@@ -11,29 +11,18 @@ app = FastAPI()
 
 ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijg3NTRiYWRiY2IzNjRlYzI5NjI1OTZjYTYzZDRmNTlhIiwiaCI6Im11cm11cjY0In0="
 
-class TrailRequest(BaseModel):
+class Coordinates(BaseModel):
     lat: float
     lng: float
-    distance_category: str = "medium"
 
 @app.get("/")
 async def read_index():
     return FileResponse(os.path.join("static", "index.html"))
 
 @app.post("/api/generate-trail")
-async def generate_trail(req: TrailRequest):
-    start_lat = req.lat
-    start_lng = req.lng
-    
-    # Map distance dropdown selections to base target lengths and waypoint counts
-    # Base lengths are offset to compensate for ORS route expansion
-    distance_presets = {
-        "short": {"length": 3000, "points": 6},   # Output: ~3km - 5km
-        "medium": {"length": 4500, "points": 8},  # Output: ~5km - 8km
-        "long": {"length": 7000, "points": 10}    # Output: ~8km - 12km
-    }
-    
-    preset = distance_presets.get(req.distance_category, distance_presets["medium"])
+async def generate_trail(coords: Coordinates):
+    start_lat = coords.lat
+    start_lng = coords.lng
     
     url = "https://api.openrouteservice.org/v2/directions/foot-hiking/geojson"
     headers = {
@@ -47,8 +36,8 @@ async def generate_trail(req: TrailRequest):
         "coordinates": [[start_lng, start_lat]],
         "options": {
             "round_trip": {
-                "length": preset["length"],
-                "points": preset["points"],
+                "length": 4000,        # Conservative base distance target
+                "points": 5,           # Keeps good path wiggles without forcing extreme detours
                 "seed": random_seed
             }
         }
