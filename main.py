@@ -33,15 +33,21 @@ async def generate_trail(coords: Coordinates):
     random_seed = random.randint(1, 1000)
     
     body = {
-        "coordinates": [[start_lng, start_lat]],
-        "options": {
-            "round_trip": {
-                "length": 4000,        # Conservative base distance target
-                "points": 5,           # Keeps good path wiggles without forcing extreme detours
-                "seed": random_seed
+            "coordinates": [[start_lng, start_lat]],
+            "options": {
+                "round_trip": {
+                    "length": 4000,
+                    "points": 10,          # Increased to 10 for maximum wiggles
+                    "seed": random_seed
+                },
+                "profile_params": {
+                    "weight_params": {
+                        "steepness_difficulty": 2 # Slight bias toward varied terrain
+                    }
+                },
+                "avoid_features": ["highways"]    # Steers away from major roads
             }
         }
-    }
     
     try:
         url_req = urllib.request.Request(url, data=json.dumps(body).encode('utf-8'), headers=headers, method='POST')
