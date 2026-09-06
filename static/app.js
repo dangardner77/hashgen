@@ -1,4 +1,3 @@
-// Initialize map centered near Hayling/Emsworth
 const map = L.map('map').setView([50.8473, -0.9824], 13);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -9,7 +8,6 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 let startMarker = null;
 let selectedCoords = null;
 
-// Listen for user clicks on the map to set the Pub / "On-Inn"
 map.on('click', function(e) {
     const lat = parseFloat(e.latlng.lat.toFixed(6));
     const lng = parseFloat(e.latlng.lng.toFixed(6));
@@ -25,7 +23,6 @@ map.on('click', function(e) {
     }
 });
 
-// Send request to build the loop
 document.getElementById('sendBtn').addEventListener('click', async () => {
     if (!selectedCoords) return;
     
@@ -33,30 +30,37 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
     responseStatus.style.color = 'inherit';
     responseStatus.innerText = "Laying hash trail...";
     
+    // Read selected distance category
+    const distanceCategory = document.getElementById('distanceSelect').value;
+    
+    const payload = {
+        lat: selectedCoords.lat,
+        lng: selectedCoords.lng,
+        distance_category: distanceCategory
+    };
+    
     try {
         const response = await fetch('/api/generate-trail', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(selectedCoords)
+            body: JSON.stringify(payload)
         });
         
         const data = await response.json();
         responseStatus.innerText = data.message;
         
-        // Remove previous route line if it exists
         if (window.currentTrailLine) {
             map.removeLayer(window.currentTrailLine);
         }
         
         if (data.trail && data.trail.length > 0) {
             window.currentTrailLine = L.polyline(data.trail, {
-                color: '#d32f2f',   // Crimson red trail color
+                color: '#d32f2f',
                 weight: 5,
                 opacity: 0.85,
-                dashArray: '8, 6'   // Dashed trail line style
+                dashArray: '8, 6'
             }).addTo(map);
             
-            // Adjust camera view comfortably around the generated route
             map.fitBounds(window.currentTrailLine.getBounds(), { padding: [40, 40] });
         }
         
