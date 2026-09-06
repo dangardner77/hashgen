@@ -30,20 +30,11 @@ document.getElementById('sendBtn').addEventListener('click', async () => {
     responseStatus.style.color = 'inherit';
     responseStatus.innerText = "Laying hash trail...";
     
-    // Read selected distance category
-    const distanceCategory = document.getElementById('distanceSelect').value;
-    
-    const payload = {
-        lat: selectedCoords.lat,
-        lng: selectedCoords.lng,
-        distance_category: distanceCategory
-    };
-    
     try {
         const response = await fetch('/api/generate-trail', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(selectedCoords)
         });
         
         const data = await response.json();
