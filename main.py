@@ -1,6 +1,6 @@
-import math
 import os
 import json
+import random
 import urllib.request
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
@@ -9,52 +9,64 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-# Paste your OpenRouteService API key here
 ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijg3NTRiYWRiY2IzNjRlYzI5NjI1OTZjYTYzZDRmNTlhIiwiaCI6Im11cm11cjY0In0="
 
-# Renamed cleanly to TrailRequest to match your function argument below
-class TrailRequest(BaseModel):
+class Coordinates(BaseModel):
     lat: float
     lng: float
-    minutes: int  # Dynamic time parameter
 
 @app.get("/")
 async def read_index():
     return FileResponse(os.path.join("static", "index.html"))
 
 @app.post("/api/generate-trail")
-async def generate_trail(req_data: TrailRequest):
-    start_lat = req_data.lat
-    start_lng = req_data.lng
+async def generate_trail(coords: Coordinates):
+    start_lat = coords.lat
+    start_lng = coords.lng
     
-    # 2. Convert incoming minutes to seconds for the API
-    target_time_seconds = req_data.minutes * 60 
-
-    url = "https://api.openrouteservice.org/v2/isochrones/foot-hiking"
+    url = "https://api.openrouteservice.org/v2/directions/foot-hiking/geojson"
     
     headers = {
         "Authorization": ORS_API_KEY,
         "Content-Type": "application/json"
     }
     
+    # Random seed guarantees a unique wiggle and direction every time you click
+    random_seed = random.randint(1, 1000)
+    
+    # 6000m target keeps the resulting loop consistently between 5km and 7km
     body = {
-        "locations": [[start_lng, start_lat]],
-        "range": [target_time_seconds],
-        "range_type": "time"
+        "coordinates": [[start_lng, start_lat]],
+        "options": {
+            "round_trip": {
+                "length": 6000,
+                "points": 5,           # Adding 5 evaluation points forces extra wiggles
+                "seed": random_seed
+            }
+        }
     }
     
     try:
         req = urllib.request.Request(url, data=json.dumps(body).encode('utf-8'), headers=headers, method='POST')
+        
         with urllib.request.urlopen(req) as response:
             result = json.loads(response.read().decode('utf-8'))
             
-        boundary_geometry = result['features'][0]['geometry']['coordinates'][0]
-        boundary_line = [[pt[1], pt[0]] for pt in boundary_geometry]
+        feature = result['features'][0]
+        geometry = feature['geometry']['coordinates']
+        
+        # Convert OpenRouteService [Lng, Lat] to Leaflet [Lat, Lng]
+        trail_line = [[pt[1], pt[0]] for pt in geometry]
+        
+        # Extract route metrics to display in UI
+        summary = feature['properties']['summary']
+        dist_km = round(summary['distance'] / 1000, 2)
         
         return {
             "status": "success",
-            "message": f"{req_data.minutes}-minute boundary mapped!",
-            "trail": boundary_line
+            "message": f"On-On! Generated {dist_km} km hash trail.",
+            "trail": trail_line,
+            "distance_km": dist_km
         }
         
     except Exception as e:
@@ -64,10 +76,10 @@ async def generate_trail(req_data: TrailRequest):
                 error_details = e.read().decode('utf-8')
             except Exception:
                 pass
-        print(f"Isochrone Error: {error_details}")
+        print(f"Routing Error: {error_details}")
         return {
             "status": "error",
-            "message": f"Failed to calculate network boundary: {error_details}",
+            "message": f"Failed to generate trail: {error_details}",
             "trail": []
         }
 
