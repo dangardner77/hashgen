@@ -37,7 +37,7 @@ async def generate_trail(coords: Coordinates):
             "options": {
                 "round_trip": {
                     "length": 4000,
-                    "points": 10,          # 10 waypoints for maximum path turns
+                    "points": 6,          # 10 waypoints for maximum path turns
                     "seed": random_seed
                 }
             }
