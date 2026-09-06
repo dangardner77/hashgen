@@ -15,6 +15,14 @@
     <div id="controls">
         <h3>Select the On Inn</h3>
         <p id="coords">Click on the map to set the start point.</p>
+        <div style="margin-bottom: 12px;">
+            <label for="distanceSelect" style="display: block; font-size: 13px; font-weight: bold; margin-bottom: 4px;">Trail Distance:</label>
+            <select id="distanceSelect" style="width: 100%; padding: 6px; font-size: 13px;">
+                <option value="short">Short (~3km - 5km)</option>
+                <option value="medium" selected>Medium (~5km - 8km)</option>
+                <option value="long">Long (~8km - 12km)</option>
+            </select>
+        </div>
         <button id="sendBtn" disabled>Generate Trail</button>
         <p id="backendResponse" style="margin-top: 10px; color: green; font-size: 12px;"></p>
     </div>
