@@ -1,24 +1,3 @@
-import os
-import json
-import random
-import urllib.request
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-
-app = FastAPI()
-
-ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijg3NTRiYWRiY2IzNjRlYzI5NjI1OTZjYTYzZDRmNTlhIiwiaCI6Im11cm11cjY0In0="
-
-class Coordinates(BaseModel):
-    lat: float
-    lng: float
-
-@app.get("/")
-async def read_index():
-    return FileResponse(os.path.join("static", "index.html"))
-
 @app.post("/api/generate-trail")
 async def generate_trail(coords: Coordinates):
     start_lat = coords.lat
@@ -31,16 +10,16 @@ async def generate_trail(coords: Coordinates):
         "Content-Type": "application/json"
     }
     
-    # Random seed guarantees a unique wiggle and direction every time you click
     random_seed = random.randint(1, 1000)
     
-    # 6000m target keeps the resulting loop consistently between 5km and 7km
+    # Lowering length to 4500m compensates for ORS distance overshoots
+    # Increasing points to 8 forces higher path frequency and maximum wiggles
     body = {
         "coordinates": [[start_lng, start_lat]],
         "options": {
             "round_trip": {
-                "length": 6000,
-                "points": 5,           # Adding 5 evaluation points forces extra wiggles
+                "length": 4500,        # Target ~4.5km base to hit actual 5km-7.5km real-world output
+                "points": 8,           # Higher waypoint density forces more bends, twists, and detours
                 "seed": random_seed
             }
         }
@@ -55,16 +34,14 @@ async def generate_trail(coords: Coordinates):
         feature = result['features'][0]
         geometry = feature['geometry']['coordinates']
         
-        # Convert OpenRouteService [Lng, Lat] to Leaflet [Lat, Lng]
         trail_line = [[pt[1], pt[0]] for pt in geometry]
         
-        # Extract route metrics to display in UI
         summary = feature['properties']['summary']
         dist_km = round(summary['distance'] / 1000, 2)
         
         return {
             "status": "success",
-            "message": f"On-On! Generated {dist_km} km hash trail.",
+            "message": f"On-On! Trail generated: {dist_km} km",
             "trail": trail_line,
             "distance_km": dist_km
         }
@@ -82,10 +59,3 @@ async def generate_trail(coords: Coordinates):
             "message": f"Failed to generate trail: {error_details}",
             "trail": []
         }
-
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-if __name__ == "__main__":
-    import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
