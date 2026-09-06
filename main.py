@@ -11,60 +11,66 @@ app = FastAPI()
 
 ORS_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6Ijg3NTRiYWRiY2IzNjRlYzI5NjI1OTZjYTYzZDRmNTlhIiwiaCI6Im11cm11cjY0In0="
 
-class Coordinates(BaseModel):
+class TrailRequest(BaseModel):
     lat: float
     lng: float
+    distance_category: str = "medium"
 
 @app.get("/")
 async def read_index():
     return FileResponse(os.path.join("static", "index.html"))
 
 @app.post("/api/generate-trail")
-async def generate_trail(coords: Coordinates):
-    start_lat = coords.lat
-    start_lng = coords.lng
+async def generate_trail(req: TrailRequest):
+    start_lat = req.lat
+    start_lng = req.lng
+    
+    # Map distance dropdown selections to base target lengths and waypoint counts
+    # Base lengths are offset to compensate for ORS route expansion
+    distance_presets = {
+        "short": {"length": 3000, "points": 6},   # Output: ~3km - 5km
+        "medium": {"length": 4500, "points": 8},  # Output: ~5km - 8km
+        "long": {"length": 7000, "points": 10}    # Output: ~8km - 12km
+    }
+    
+    preset = distance_presets.get(req.distance_category, distance_presets["medium"])
     
     url = "https://api.openrouteservice.org/v2/directions/foot-hiking/geojson"
-    
     headers = {
         "Authorization": ORS_API_KEY,
         "Content-Type": "application/json"
     }
     
-    # Random seed guarantees a unique wiggle and direction every time you click
     random_seed = random.randint(1, 1000)
     
-    # 6000m target keeps the resulting loop consistently between 5km and 7km
     body = {
         "coordinates": [[start_lng, start_lat]],
         "options": {
             "round_trip": {
-                "length": 4500,
-                "points": 8,           # Adding 5 evaluation points forces extra wiggles
+                "length": preset["length"],
+                "points": preset["points"],
                 "seed": random_seed
             }
         }
     }
     
     try:
-        req = urllib.request.Request(url, data=json.dumps(body).encode('utf-8'), headers=headers, method='POST')
+        url_req = urllib.request.Request(url, data=json.dumps(body).encode('utf-8'), headers=headers, method='POST')
         
-        with urllib.request.urlopen(req) as response:
+        with urllib.request.urlopen(url_req) as response:
             result = json.loads(response.read().decode('utf-8'))
             
         feature = result['features'][0]
         geometry = feature['geometry']['coordinates']
         
-        # Convert OpenRouteService [Lng, Lat] to Leaflet [Lat, Lng]
         trail_line = [[pt[1], pt[0]] for pt in geometry]
         
-        # Extract route metrics to display in UI
         summary = feature['properties']['summary']
         dist_km = round(summary['distance'] / 1000, 2)
         
         return {
             "status": "success",
-            "message": f"On-On! Generated {dist_km} km hash trail.",
+            "message": f"On-On! Trail generated: {dist_km} km",
             "trail": trail_line,
             "distance_km": dist_km
         }
